@@ -8,15 +8,17 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 const (
-	agentDir  = "/var/lib/incus-agent"
-	isoDevice = "/dev/disk/by-label/incus_agent"
-	isoMount  = "/mnt/incus_agent_iso"
-	agentBin  = "./incus-agent"
-
-	requiredFiles = "agent.crt,agent.key,server.crt"
+	agentDir     = "/var/lib/incus-agent"
+	isoDevice    = "/dev/disk/by-label/incus_agent"
+	isoMount     = "/mnt/incus_agent_iso"
+	agentBin     = "./incus-agent"
+	virtioPort   = "/dev/virtio-ports/org.linuxcontainers.incus"
+	waitTimeout  = 120 // seconds to wait for devices
+	waitInterval = 2   // seconds between checks
 )
 
 func main() {
@@ -27,6 +29,15 @@ func main() {
 }
 
 func run() error {
+	fmt.Println("incus-agent-wrapper: starting")
+
+	// Wait for the virtio-serial port to appear.
+	fmt.Printf("incus-agent-wrapper: waiting for %s\n", virtioPort)
+	if err := waitForPath(virtioPort); err != nil {
+		return err
+	}
+	fmt.Printf("incus-agent-wrapper: found %s\n", virtioPort)
+
 	// Ensure the agent runtime directory exists.
 	if err := os.MkdirAll(agentDir, 0o755); err != nil {
 		return fmt.Errorf("creating agent dir: %w", err)
@@ -34,18 +45,30 @@ func run() error {
 
 	// Check if certs already exist (restart resilience).
 	if !certsExist() {
+		// Wait for the config drive to appear.
+		fmt.Printf("incus-agent-wrapper: waiting for %s\n", isoDevice)
+		if err := waitForPath(isoDevice); err != nil {
+			return err
+		}
+
 		// Mount the ISO config drive.
 		if err := os.MkdirAll(isoMount, 0o755); err != nil {
 			return fmt.Errorf("creating iso mount dir: %w", err)
 		}
 
+		fmt.Printf("incus-agent-wrapper: mounting %s\n", isoDevice)
 		if err := syscall.Mount(isoDevice, isoMount, "iso9660", syscall.MS_RDONLY, ""); err != nil {
 			return fmt.Errorf("mounting config drive %s: %w", isoDevice, err)
 		}
 
+		// List what's on the ISO for debugging.
+		entries, _ := os.ReadDir(isoMount)
+		for _, e := range entries {
+			fmt.Printf("incus-agent-wrapper: ISO contains: %s\n", e.Name())
+		}
+
 		// Copy all files from ISO to the agent directory.
 		if err := copyDir(isoMount, agentDir); err != nil {
-			// Try to unmount even on error.
 			_ = syscall.Unmount(isoMount, 0)
 			return fmt.Errorf("copying config files: %w", err)
 		}
@@ -70,9 +93,23 @@ func run() error {
 
 	// Exec the real incus-agent.
 	argv := []string{agentBin, "--secrets-location", agentDir}
-	fmt.Printf("incus-agent-wrapper: execing %s\n", agentBin)
+	fmt.Printf("incus-agent-wrapper: execing %s %v\n", agentBin, argv[1:])
 
 	return syscall.Exec(agentBin, argv, os.Environ())
+}
+
+// waitForPath waits until the given path exists or times out.
+func waitForPath(path string) error {
+	deadline := time.Now().Add(time.Duration(waitTimeout) * time.Second)
+	for {
+		if _, err := os.Stat(path); err == nil {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timeout waiting for %s after %ds", path, waitTimeout)
+		}
+		time.Sleep(time.Duration(waitInterval) * time.Second)
+	}
 }
 
 // certsExist checks whether the required TLS cert files already exist.

@@ -1,6 +1,4 @@
 name: incus-agent
-depends:
-  - path: /dev/virtio-ports/org.linuxcontainers.incus
 container:
   entrypoint: ./incus-agent-wrapper
   security:
@@ -10,8 +8,9 @@ container:
       destination: /dev
       type: bind
       options:
-        - rw
+        - rshared
         - rbind
+        - rw
     - source: /sys
       destination: /sys
       type: bind
@@ -25,3 +24,4 @@ container:
         - ro
         - rbind
 restart: always
+logToConsole: true
