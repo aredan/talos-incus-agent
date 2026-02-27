@@ -14,7 +14,7 @@ const (
 	agentDir   = "/run/incus_agent"
 	isoDevice  = "/dev/disk/by-label/incus_agent"
 	isoMount   = "/mnt/incus_agent_iso"
-	agentBin   = "/usr/local/lib/containers/incus-agent/incus-agent"
+	agentBin   = "./incus-agent"
 
 	requiredFiles = "agent.crt,agent.key,server.crt"
 )

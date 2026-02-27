@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 go build -ldflags "-s -w" -o /incus-agent-wrapper .
 FROM scratch
 
 COPY manifest.yaml /
-COPY incus-agent.yaml /rootfs/etc/cri/conf.d/incus-agent.yaml
+COPY incus-agent.yaml /rootfs/usr/local/etc/containers/incus-agent.yaml
 
 COPY --from=incus-builder /incus-agent /rootfs/usr/local/lib/containers/incus-agent/incus-agent
 COPY --from=wrapper-builder /incus-agent-wrapper /rootfs/usr/local/lib/containers/incus-agent/incus-agent-wrapper

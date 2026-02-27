@@ -1,9 +1,10 @@
 name: incus-agent
 depends:
   - path: /dev/virtio-ports/org.linuxcontainers.incus
-  - path: /dev/disk/by-label/incus_agent
 container:
-  entrypoint: /usr/local/lib/containers/incus-agent/incus-agent-wrapper
+  entrypoint: ./incus-agent-wrapper
+  security:
+    writeableRootfs: true
   mounts:
     - source: /dev
       destination: /dev
@@ -25,12 +26,6 @@ container:
         - rbind
     - source: /proc
       destination: /proc
-      type: bind
-      options:
-        - ro
-        - rbind
-    - source: /etc
-      destination: /etc
       type: bind
       options:
         - ro
