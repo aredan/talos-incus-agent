@@ -38,7 +38,8 @@ jobs:
       - name: Build Talos metal image with incus-agent extension
         run: |
           mkdir -p /tmp/talos-out
-          docker run --rm \
+          docker run --rm --privileged \
+            -v /dev:/dev \
             -v /tmp/talos-out:/out \
             -v /var/run/docker.sock:/var/run/docker.sock \
             ghcr.io/siderolabs/imager:${{ inputs.talos_version }} \
