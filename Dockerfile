@@ -1,5 +1,5 @@
 # Stage 1: Build the incus-agent binary
-FROM golang:1.23-alpine AS incus-builder
+FROM golang:1.25-alpine AS incus-builder
 
 RUN apk add --no-cache git make
 
@@ -9,7 +9,7 @@ RUN git clone --depth 1 --branch v6.22.0 https://github.com/lxc/incus.git .
 RUN CGO_ENABLED=0 go build -tags "agent,netgo" -ldflags "-s -w" -o /incus-agent ./cmd/incus-agent
 
 # Stage 2: Build the wrapper binary
-FROM golang:1.23-alpine AS wrapper-builder
+FROM golang:1.25-alpine AS wrapper-builder
 
 WORKDIR /src
 COPY cmd/wrapper/ .
