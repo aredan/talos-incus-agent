@@ -12,12 +12,6 @@ container:
       options:
         - rw
         - rbind
-    - source: /run/incus_agent
-      destination: /run/incus_agent
-      type: bind
-      options:
-        - rw
-        - rbind
     - source: /sys
       destination: /sys
       type: bind
