@@ -52,7 +52,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y qemu-utils zstd
 
           # Decompress
-          xz -d /tmp/talos-out/metal-${{ inputs.arch }}.raw.xz
+          zstd -d /tmp/talos-out/metal-${{ inputs.arch }}.raw.zst
 
           # Convert raw to qcow2
           qemu-img convert -p -f raw -O qcow2 \
