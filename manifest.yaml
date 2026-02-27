@@ -1,0 +1,9 @@
+version: v1alpha1
+metadata:
+  name: incus-agent
+  version: 6.22.0
+  author: aredan
+  description: Incus VM agent for Talos Linux - reports IP, CPU, and memory to the Incus host via vsock
+  compatibility:
+    talos:
+      version: ">= v1.5.0"

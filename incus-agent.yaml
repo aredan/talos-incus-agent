@@ -1,0 +1,38 @@
+name: incus-agent
+depends:
+  - path: /dev/virtio-ports/org.linuxcontainers.incus
+  - path: /dev/disk/by-label/incus_agent
+container:
+  entrypoint: /usr/local/lib/containers/incus-agent/incus-agent-wrapper
+  mounts:
+    - source: /dev
+      destination: /dev
+      type: bind
+      options:
+        - rw
+        - rbind
+    - source: /run/incus_agent
+      destination: /run/incus_agent
+      type: bind
+      options:
+        - rw
+        - rbind
+    - source: /sys
+      destination: /sys
+      type: bind
+      options:
+        - ro
+        - rbind
+    - source: /proc
+      destination: /proc
+      type: bind
+      options:
+        - ro
+        - rbind
+    - source: /etc
+      destination: /etc
+      type: bind
+      options:
+        - ro
+        - rbind
+restart: always
