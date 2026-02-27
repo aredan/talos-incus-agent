@@ -1,0 +1,80 @@
+name: Build Talos Image with Incus Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      talos_version:
+        description: "Talos Linux version"
+        required: true
+        default: "v1.12.4"
+      arch:
+        description: "Architecture"
+        required: true
+        default: "amd64"
+        type: choice
+        options:
+          - amd64
+          - arm64
+
+env:
+  REGISTRY: ghcr.io
+  EXTENSION_IMAGE: ghcr.io/aredan/talos-incus-agent:6.22.0
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Talos metal image with incus-agent extension
+        run: |
+          mkdir -p /tmp/talos-out
+          docker run --rm \
+            -v /tmp/talos-out:/out \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/siderolabs/imager:${{ inputs.talos_version }} \
+            metal \
+            --arch ${{ inputs.arch }} \
+            --system-extension-image ${{ env.EXTENSION_IMAGE }}
+
+      - name: Convert to Incus-compatible format
+        run: |
+          sudo apt-get update && sudo apt-get install -y qemu-utils zstd
+
+          # Decompress
+          xz -d /tmp/talos-out/metal-${{ inputs.arch }}.raw.xz
+
+          # Convert raw to qcow2
+          qemu-img convert -p -f raw -O qcow2 \
+            /tmp/talos-out/metal-${{ inputs.arch }}.raw \
+            /tmp/talos-out/rootfs.img
+
+          # Create Incus metadata
+          cat > /tmp/talos-out/metadata.yaml <<EOF
+          architecture: x86_64
+          creation_date: $(date +%s)
+          properties:
+            description: Talos Linux ${{ inputs.talos_version }} with incus-agent
+            os: Talos Linux
+            release: ${{ inputs.talos_version }}
+          EOF
+
+          # Package as tar.zst for incus image import
+          tar --zstd -cf /tmp/talos-out/talos-${{ inputs.talos_version }}-incus-agent-${{ inputs.arch }}.tar.zst \
+            -C /tmp/talos-out metadata.yaml rootfs.img
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: talos-${{ inputs.talos_version }}-incus-agent-${{ inputs.arch }}
+          path: /tmp/talos-out/talos-${{ inputs.talos_version }}-incus-agent-${{ inputs.arch }}.tar.zst
+          retention-days: 30
