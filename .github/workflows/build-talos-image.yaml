@@ -21,7 +21,42 @@ env:
   EXTENSION_IMAGE: ghcr.io/aredan/talos-incus-agent:0.1.0-test
 
 jobs:
-  build-image:
+  build-installer:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build installer image with incus-agent extension
+        run: |
+          mkdir -p /tmp/talos-out
+          docker run --rm --privileged \
+            -v /tmp/talos-out:/out \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            ghcr.io/siderolabs/imager:${{ inputs.talos_version }} \
+            installer \
+            --arch ${{ inputs.arch }} \
+            --system-extension-image ${{ env.EXTENSION_IMAGE }}
+
+      - name: Install crane
+        run: |
+          VERSION=0.20.2
+          curl -sL "https://github.com/google/go-containerregistry/releases/download/v${VERSION}/go-containerregistry_Linux_x86_64.tar.gz" | tar -xzf - crane
+          sudo mv crane /usr/local/bin/
+
+      - name: Push installer image to GHCR
+        run: |
+          crane push /tmp/talos-out/installer-${{ inputs.arch }}.tar ${{ env.REGISTRY }}/aredan/talos-installer:${{ inputs.talos_version }}-incus-agent
+
+  build-metal:
     runs-on: ubuntu-latest
     permissions:
       contents: read
