@@ -11,17 +11,4 @@ container:
         - rshared
         - rbind
         - rw
-    - source: /sys
-      destination: /sys
-      type: bind
-      options:
-        - ro
-        - rbind
-    - source: /proc
-      destination: /proc
-      type: bind
-      options:
-        - ro
-        - rbind
 restart: always
-logToConsole: true
