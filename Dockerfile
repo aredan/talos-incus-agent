@@ -22,10 +22,13 @@ COPY cmd/wrapper/ .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w" -o /incus-agent-wrapper .
 
-# Stage 3: Package as Talos system extension
-FROM scratch
+# Stage 3: Minimal runtime image
+FROM alpine:3.21
 
-COPY manifest.yaml /
-COPY incus-agent.yaml /rootfs/usr/local/etc/containers/incus-agent.yaml
-COPY --from=incus-builder /incus-agent /rootfs/usr/local/lib/containers/incus-agent/incus-agent
-COPY --from=wrapper-builder /incus-agent-wrapper /rootfs/usr/local/lib/containers/incus-agent/incus-agent-wrapper
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /opt/incus-agent
+COPY --from=incus-builder /incus-agent ./incus-agent
+COPY --from=wrapper-builder /incus-agent-wrapper ./incus-agent-wrapper
+
+ENTRYPOINT ["./incus-agent-wrapper"]

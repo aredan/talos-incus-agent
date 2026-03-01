@@ -1,4 +1,4 @@
-name: Build and Push Extension Image
+name: Build and Push Image
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: aredan/incus-agent-daemonset
 
 jobs:
   build:
