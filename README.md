@@ -27,34 +27,64 @@ make push
 make push REGISTRY=ghcr.io IMAGE_NAME=myorg/talos-incus-agent TAG=v6.22.0
 ```
 
-## Usage
+## Deployment
 
-### 1. Include in Talos Image
+There are two deployment methods. The **DaemonSet** method is recommended because Talos's containerd seccomp profile blocks the AF_VSOCK socket family needed by incus-agent.
+
+### Method 1: DaemonSet (Recommended)
+
+Deploys incus-agent as a privileged Kubernetes DaemonSet, bypassing the containerd seccomp restriction.
+
+**Prerequisites:**
+- Talos VM with `agent:config` disk device attached
+- A running Kubernetes cluster on the VM
+
+```bash
+# 1. Attach config drive to VM (if not already done)
+incus config device add <vm-name> agent disk source=agent:config
+
+# 2. Deploy the DaemonSet
+kubectl apply -f deploy/daemonset.yaml
+
+# 3. Verify
+kubectl -n incus-agent logs daemonset/incus-agent
+incus ls
+```
+
+Or build and push your own image:
+
+```bash
+make build-daemonset
+make push-daemonset
+```
+
+### Method 2: Talos System Extension
+
+> **Note:** This method currently does not work due to Talos's containerd seccomp profile blocking AF_VSOCK sockets. It is kept for reference and future Talos versions that may allow seccomp overrides for extensions.
 
 Add this extension when building your Talos image via [Image Factory](https://factory.talos.dev/) or `imager`:
 
 ```
-ghcr.io/aredan/talos-incus-agent:v6.22.0
+ghcr.io/aredan/talos-incus-agent:6.22.0
 ```
 
-### 2. Attach Config Drive
-
-Ensure VMs have the Incus agent config drive attached. If using `omni-incus-infra-provider`, this is done automatically. Otherwise, add the device manually:
+Attach the config drive:
 
 ```bash
 incus config device add <vm-name> agent disk source=agent:config
 ```
 
-### 3. Verify
-
-After booting:
+### Verify
 
 ```bash
-# Check agent logs
-talosctl logs ext-incus-agent
-
-# Verify IP shows in Incus
+# Check VM IP shows in Incus
 incus ls
+
+# Check agent logs (DaemonSet)
+kubectl -n incus-agent logs daemonset/incus-agent
+
+# Check agent logs (Extension)
+talosctl logs ext-incus-agent
 ```
 
 ## Requirements

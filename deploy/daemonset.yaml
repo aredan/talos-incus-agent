@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: incus-agent
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: incus-agent
+  namespace: incus-agent
+  labels:
+    app: incus-agent
+spec:
+  selector:
+    matchLabels:
+      app: incus-agent
+  template:
+    metadata:
+      labels:
+        app: incus-agent
+    spec:
+      hostNetwork: true
+      tolerations:
+        # Run on all nodes including control plane
+        - operator: Exists
+      containers:
+        - name: incus-agent
+          image: ghcr.io/aredan/incus-agent-daemonset:6.22.0
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: dev
+              mountPath: /dev
+            - name: run
+              mountPath: /run
+              mountPropagation: Bidirectional
+            - name: proc-host
+              mountPath: /proc
+              readOnly: true
+            - name: sys-host
+              mountPath: /sys
+              readOnly: true
+      volumes:
+        - name: dev
+          hostPath:
+            path: /dev
+        - name: run
+          hostPath:
+            path: /run
+        - name: proc-host
+          hostPath:
+            path: /proc
+        - name: sys-host
+          hostPath:
+            path: /sys
