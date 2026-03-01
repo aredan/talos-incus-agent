@@ -11,4 +11,23 @@ container:
         - rshared
         - rbind
         - rw
+    - source: /run
+      destination: /run
+      type: bind
+      options:
+        - rshared
+        - rbind
+        - rw
+    - source: /proc
+      destination: /proc
+      type: bind
+      options:
+        - rbind
+        - ro
+    - source: /sys
+      destination: /sys
+      type: bind
+      options:
+        - rbind
+        - ro
 restart: always

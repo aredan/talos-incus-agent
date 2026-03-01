@@ -15,10 +15,14 @@ on:
         options:
           - amd64
           - arm64
+      extension_version:
+        description: "Extension image tag"
+        required: true
+        default: "6.22.0"
 
 env:
   REGISTRY: ghcr.io
-  EXTENSION_IMAGE: ghcr.io/aredan/talos-incus-agent:0.1.0-test
+  EXTENSION_IMAGE: ghcr.io/aredan/talos-incus-agent:${{ inputs.extension_version }}
 
 jobs:
   build-installer:
