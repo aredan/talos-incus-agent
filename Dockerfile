@@ -8,7 +8,7 @@ RUN apk add --no-cache git gcc musl-dev linux-headers acl-dev acl-static
 WORKDIR /src
 RUN git clone --depth 1 --branch ${INCUS_VERSION} https://github.com/lxc/incus.git .
 
-RUN CGO_ENABLED=1 CC=musl-gcc GOOS=linux GOARCH=amd64 \
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -tags agent,netgo \
     -ldflags "-s -w -linkmode external -extldflags '-static'" \
     -o /incus-agent \
