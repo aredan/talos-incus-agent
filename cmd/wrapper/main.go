@@ -24,15 +24,25 @@ const (
 	// virtioPort is the virtio-serial port that incus-agent uses
 	// for signalling readiness to the host.
 	virtioPort = "/dev/virtio-ports/org.linuxcontainers.incus"
-
-	// agentBin is the path to the real incus-agent binary, shipped
-	// alongside this wrapper in the extension image.
-	agentBin = "/usr/local/lib/containers/incus-agent/incus-agent"
 )
 
 func main() {
 	log.SetPrefix("incus-agent-wrapper: ")
 	log.SetFlags(0)
+
+	// Resolve the absolute path to our incus-agent binary BEFORE any chdir.
+	// The binary is in the same directory as this wrapper.
+	selfDir, err := filepath.Abs(".")
+	if err != nil {
+		log.Fatalf("failed to get working directory: %v", err)
+	}
+	agentBin := filepath.Join(selfDir, "incus-agent")
+	log.Printf("resolved incus-agent binary at %s", agentBin)
+
+	// Verify the binary exists.
+	if _, err := os.Stat(agentBin); err != nil {
+		log.Fatalf("incus-agent binary not found: %v", err)
+	}
 
 	// Wait for the virtio-serial port to appear (signals that the VM
 	// was launched by Incus with agent support).
@@ -51,19 +61,25 @@ func main() {
 
 	// Mount the ISO config drive.
 	log.Println("mounting config drive...")
-	err := syscall.Mount(configDrive, mountPoint, "iso9660", syscall.MS_RDONLY, "")
+	err = syscall.Mount(configDrive, mountPoint, "iso9660", syscall.MS_RDONLY, "")
 	if err != nil {
 		log.Fatalf("failed to mount config drive: %v", err)
 	}
 	log.Println("config drive mounted")
 
-	// Copy all files from the ISO to agentDir.
+	// Copy only certificate and config files from the ISO to agentDir.
+	// Skip the incus-agent and lxd-agent binaries (we use our own).
 	entries, err := os.ReadDir(mountPoint)
 	if err != nil {
 		log.Fatalf("failed to read config drive: %v", err)
 	}
+	skipFiles := map[string]bool{
+		"incus-agent": true,
+		"lxd-agent":   true,
+		"install.sh":  true,
+	}
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if entry.IsDir() || skipFiles[entry.Name()] {
 			continue
 		}
 		src := filepath.Join(mountPoint, entry.Name())
@@ -88,14 +104,14 @@ func main() {
 	}
 	log.Println("certificates verified")
 
-	// Exec the real incus-agent.
+	// Change working directory to agentDir so incus-agent finds its certs.
+	must(os.Chdir(agentDir))
+
+	// Exec the real incus-agent using the absolute path resolved earlier.
 	args := []string{"incus-agent", "--devincus"}
 	env := os.Environ()
 
-	log.Printf("execing incus-agent from %s", agentBin)
-
-	// Change working directory to agentDir so incus-agent finds its certs.
-	must(os.Chdir(agentDir))
+	log.Printf("execing incus-agent from %s (cwd: %s)", agentBin, agentDir)
 
 	err = syscall.Exec(agentBin, args, env)
 	// If we get here, exec failed.
