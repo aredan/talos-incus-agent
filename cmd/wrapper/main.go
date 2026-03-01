@@ -108,7 +108,7 @@ func main() {
 	must(os.Chdir(agentDir))
 
 	// Exec the real incus-agent using the absolute path resolved earlier.
-	args := []string{"incus-agent", "--devincus"}
+	args := []string{"incus-agent"}
 	env := os.Environ()
 
 	log.Printf("execing incus-agent from %s (cwd: %s)", agentBin, agentDir)
