@@ -2,6 +2,10 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: incus-agent
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -25,7 +29,7 @@ spec:
         - operator: Exists
       containers:
         - name: incus-agent
-          image: ghcr.io/aredan/incus-agent-daemonset:6.22.0
+          image: ghcr.io/aredan/incus-agent-daemonset:6.22.1
           securityContext:
             privileged: true
           volumeMounts:
